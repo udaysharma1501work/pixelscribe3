@@ -1,0 +1,74 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 220 13% 18%;
+    --foreground: 210 20%, 90%;
+    --card: 220 13% 22%;
+    --card-foreground: 210 20% 90%;
+    --popover: 220 13% 18%;
+    --popover-foreground: 210 20% 90%;
+    --primary: 98 12% 30%;
+    --primary-foreground: 98 12% 95%;
+    --secondary: 217 33% 25%;
+    --secondary-foreground: 210 20% 90%;
+    --muted: 217 33% 25%;
+    --muted-foreground: 215 20% 75%;
+    --accent: 27 42% 51%;
+    --accent-foreground: 27 42% 95%;
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 210 20% 90%;
+    --border: 220 13% 35%;
+    --input: 220 13% 25%;
+    --ring: 27 42% 51%;
+    --radius: 0.3rem;
+  }
+ 
+  .dark {
+    --background: 220 13% 18%;
+    --foreground: 210 20% 90%;
+    --card: 220 13% 22%;
+    --card-foreground: 210 20% 90%;
+    --popover: 220 13% 18%;
+    --popover-foreground: 210 20% 90%;
+    --primary: 98 12% 30%;
+    --primary-foreground: 98 12% 95%;
+    --secondary: 217 33% 25%;
+    --secondary-foreground: 210 20% 90%;
+    --muted: 217 33% 25%;
+    --muted-foreground: 215 20% 75%;
+    --accent: 27 42% 51%;
+    --accent-foreground: 27 42% 95%;
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 210 20% 90%;
+    --border: 220 13% 35%;
+    --input: 220 13% 25%;
+    --ring: 27 42% 51%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  .text-shadow {
+    text-shadow: 2px 2px 0px hsl(var(--background) / 0.8);
+  }
+  .retro-shadow {
+    box-shadow: 4px 4px 0px 0px hsl(var(--border));
+  }
+  .retro-shadow-sm {
+    box-shadow: 2px 2px 0px 0px hsl(var(--border));
+  }
+  .retro-shadow-hover {
+    @apply hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all duration-150;
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "meetings": [
+    {
+      "id": "8dedfd61-2f75-4ea6-83c2-ce266a29d26e",
+      "link": "https://meet.google.com/zox-odgm-cwv",
+      "title": "Meeting: zox-odgm-cwv",
+      "date": "2025-10-01T13:43:27.865Z",
+      "status": "failed",
+      "errorMessage": "FAILED_PRECONDITION: Please pass in the API key or set the GEMINI_API_KEY or GOOGLE_API_KEY environment variable.\nFor more details see https://genkit.dev/docs/plugins/google-genai"
+    }
+  ]
+}
