@@ -48,6 +48,31 @@ export async function POST(req: NextRequest) {
       }
     })();
 
+    // Trigger the bot to start recording
+    if (process.env.BOT_SERVICE_URL) {
+      try {
+        console.log('Triggering bot to start recording...');
+        const botResponse = await fetch(`${process.env.BOT_SERVICE_URL}/start-recording`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            meetingId: meeting.id,
+            meetLink: link
+          })
+        });
+        
+        if (botResponse.ok) {
+          console.log('Bot recording started successfully');
+        } else {
+          console.error('Bot failed to start:', await botResponse.text());
+        }
+      } catch (error) {
+        console.error('Error triggering bot:', error);
+      }
+    } else {
+      console.log('BOT_SERVICE_URL not set, skipping bot trigger');
+    }
+
     return NextResponse.json({ id: meeting.id }, { status: 201 });
   } catch (e) {
     console.error('Error in POST /api/meetings:', e);

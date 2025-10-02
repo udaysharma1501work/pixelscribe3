@@ -4,8 +4,8 @@
 import { randomUUID } from 'crypto';
 import fs from 'fs/promises';
 import path from 'path';
-// Simple in-memory storage for now - will persist during function execution
-let memoryStore: { meetings: MeetingRecord[] } = { meetings: [] };
+// Use a simple JSON file in /tmp (writable on Vercel)
+const TMP_FILE = '/tmp/meetings.json';
 
 export type MeetingTranscriptSegment = {
   speaker: string;
@@ -39,14 +39,21 @@ async function ensureDataFile(): Promise<void> {
 }
 
 async function loadAll(): Promise<{ meetings: MeetingRecord[] }> {
-  console.log('Loading meetings from memory store, count:', memoryStore.meetings.length);
-  return memoryStore;
+  try {
+    const raw = await fs.readFile(TMP_FILE, 'utf8');
+    const data = JSON.parse(raw || '{"meetings":[]}');
+    console.log('Loaded meetings from /tmp, count:', data.meetings.length);
+    return data;
+  } catch (error) {
+    console.log('No existing file, starting with empty meetings');
+    return { meetings: [] };
+  }
 }
 
 async function saveAll(data: { meetings: MeetingRecord[] }): Promise<void> {
-  console.log('Saving meetings to memory store, count:', data.meetings.length);
-  memoryStore = data;
-  console.log('Saved to memory store successfully');
+  console.log('Saving meetings to /tmp, count:', data.meetings.length);
+  await fs.writeFile(TMP_FILE, JSON.stringify(data, null, 2), 'utf8');
+  console.log('Saved to /tmp successfully');
 }
 
 export async function createMeeting(link: string): Promise<MeetingRecord> {
