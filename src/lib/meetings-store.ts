@@ -58,11 +58,17 @@ async function loadAll(): Promise<{ meetings: MeetingRecord[] }> {
       const listing = await list({ prefix: BLOB_KEY, token: process.env.BLOB_READ_WRITE_TOKEN || process.env.VERCEL_BLOB_READ_WRITE_TOKEN });
       const existing = (listing.blobs || []).find((b: any) => b.pathname === BLOB_KEY);
       if (!existing) {
+        console.log('No existing blob found, returning empty meetings');
         return { meetings: [] };
       }
+      console.log('Found existing blob, fetching data...');
       const res = await fetch(existing.url, { cache: 'no-store' });
-      if (!res.ok) return { meetings: [] };
+      if (!res.ok) {
+        console.error('Failed to fetch blob data:', res.status);
+        return { meetings: [] };
+      }
       const json = await res.json();
+      console.log('Loaded from blob successfully, meetings count:', json.meetings?.length || 0);
       return json;
     } catch (error) {
       console.error('Error loading from blob:', error);
@@ -91,7 +97,7 @@ async function saveAll(data: { meetings: MeetingRecord[] }): Promise<void> {
     try {
       const { put } = vercelBlob;
       await put(BLOB_KEY, JSON.stringify(data, null, 2), {
-        access: 'private',
+        access: 'public',
         contentType: 'application/json',
         token: process.env.BLOB_READ_WRITE_TOKEN || process.env.VERCEL_BLOB_READ_WRITE_TOKEN,
       });
