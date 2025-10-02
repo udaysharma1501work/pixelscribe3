@@ -17,13 +17,23 @@ export async function POST(req: NextRequest) {
     ;(async () => {
       try {
         await updateMeeting(meeting.id, { status: 'recording' });
-        const result = await processMeetingLink({ meetingLink: link });
-        await updateMeeting(meeting.id, {
-          status: 'completed',
-          title: result.title,
-          summary: result.summary,
-          transcript: result.transcript,
-        });
+        
+        // Only run AI processing if API key is available
+        if (process.env.GOOGLE_API_KEY) {
+          const result = await processMeetingLink({ meetingLink: link });
+          await updateMeeting(meeting.id, {
+            status: 'completed',
+            title: result.title,
+            summary: result.summary,
+            transcript: result.transcript,
+          });
+        } else {
+          // No API key - just mark as queued for manual processing
+          await updateMeeting(meeting.id, { 
+            status: 'queued',
+            errorMessage: 'AI processing requires GOOGLE_API_KEY to be set'
+          });
+        }
       } catch (err: unknown) {
         await updateMeeting(meeting.id, {
           status: 'failed',

@@ -60,7 +60,8 @@ export default function NewMeetingPage() {
         body: JSON.stringify({ link: meetingLink }),
       });
       if (!resp.ok) {
-        throw new Error(`Failed to create meeting (${resp.status})`);
+        const errorData = await resp.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to create meeting (${resp.status})`);
       }
       const { id } = await resp.json();
 
