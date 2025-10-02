@@ -143,8 +143,13 @@ export async function createMeeting(link: string): Promise<MeetingRecord> {
 }
 
 export async function getMeeting(id: string): Promise<MeetingRecord | null> {
+  console.log('getMeeting called with ID:', id);
   const data = await loadAll();
-  return data.meetings.find(m => m.id === id) || null;
+  console.log('Total meetings in storage:', data.meetings.length);
+  console.log('Meeting IDs in storage:', data.meetings.map(m => m.id));
+  const meeting = data.meetings.find(m => m.id === id) || null;
+  console.log('Found meeting:', meeting ? 'Yes' : 'No');
+  return meeting;
 }
 
 export async function listMeetings(): Promise<MeetingRecord[]> {
