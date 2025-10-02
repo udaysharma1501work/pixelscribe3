@@ -33,6 +33,13 @@ const DATA_DIR = path.join(process.cwd(), '.data');
 const MEETINGS_FILE = path.join(DATA_DIR, 'meetings.json');
 const USE_BLOB = !!process.env.BLOB_READ_WRITE_TOKEN || !!process.env.VERCEL_BLOB_READ_WRITE_TOKEN;
 
+console.log('Storage config:', {
+  USE_BLOB,
+  hasBlobToken: !!process.env.BLOB_READ_WRITE_TOKEN,
+  hasVercelBlobToken: !!process.env.VERCEL_BLOB_READ_WRITE_TOKEN,
+  vercelBlobAvailable: !!vercelBlob
+});
+
 const BLOB_KEY = 'pixelscribe/meetings.json';
 
 async function ensureDataFile(): Promise<void> {
@@ -46,36 +53,69 @@ async function ensureDataFile(): Promise<void> {
 
 async function loadAll(): Promise<{ meetings: MeetingRecord[] }> {
   if (USE_BLOB && vercelBlob) {
-    const { list } = vercelBlob;
-    const listing = await list({ prefix: BLOB_KEY, token: process.env.BLOB_READ_WRITE_TOKEN || process.env.VERCEL_BLOB_READ_WRITE_TOKEN });
-    const existing = (listing.blobs || []).find((b: any) => b.pathname === BLOB_KEY);
-    if (!existing) {
+    try {
+      const { list } = vercelBlob;
+      const listing = await list({ prefix: BLOB_KEY, token: process.env.BLOB_READ_WRITE_TOKEN || process.env.VERCEL_BLOB_READ_WRITE_TOKEN });
+      const existing = (listing.blobs || []).find((b: any) => b.pathname === BLOB_KEY);
+      if (!existing) {
+        return { meetings: [] };
+      }
+      const res = await fetch(existing.url, { cache: 'no-store' });
+      if (!res.ok) return { meetings: [] };
+      const json = await res.json();
+      return json;
+    } catch (error) {
+      console.error('Error loading from blob:', error);
       return { meetings: [] };
     }
-    const res = await fetch(existing.url, { cache: 'no-store' });
-    if (!res.ok) return { meetings: [] };
-    const json = await res.json();
-    return json;
   }
 
-  await ensureDataFile();
-  const raw = await fs.readFile(MEETINGS_FILE, 'utf8');
-  return JSON.parse(raw || '{"meetings":[]}');
+  // Fallback: in-memory storage for Vercel (not persistent across function invocations)
+  if (process.env.VERCEL) {
+    console.log('Using in-memory storage (not persistent)');
+    return { meetings: [] };
+  }
+
+  try {
+    await ensureDataFile();
+    const raw = await fs.readFile(MEETINGS_FILE, 'utf8');
+    return JSON.parse(raw || '{"meetings":[]}');
+  } catch (error) {
+    console.error('Error loading from filesystem:', error);
+    return { meetings: [] };
+  }
 }
 
 async function saveAll(data: { meetings: MeetingRecord[] }): Promise<void> {
   if (USE_BLOB && vercelBlob) {
-    const { put } = vercelBlob;
-    await put(BLOB_KEY, JSON.stringify(data, null, 2), {
-      access: 'private',
-      contentType: 'application/json',
-      token: process.env.BLOB_READ_WRITE_TOKEN || process.env.VERCEL_BLOB_READ_WRITE_TOKEN,
-    });
+    try {
+      const { put } = vercelBlob;
+      await put(BLOB_KEY, JSON.stringify(data, null, 2), {
+        access: 'private',
+        contentType: 'application/json',
+        token: process.env.BLOB_READ_WRITE_TOKEN || process.env.VERCEL_BLOB_READ_WRITE_TOKEN,
+      });
+      console.log('Saved to blob successfully');
+      return;
+    } catch (error) {
+      console.error('Error saving to blob:', error);
+      // Continue to fallback
+    }
+  }
+
+  // Fallback: in-memory storage for Vercel (not persistent)
+  if (process.env.VERCEL) {
+    console.log('Using in-memory storage (not persistent) - data will be lost on function restart');
     return;
   }
 
-  await ensureDataFile();
-  await fs.writeFile(MEETINGS_FILE, JSON.stringify(data, null, 2), 'utf8');
+  try {
+    await ensureDataFile();
+    await fs.writeFile(MEETINGS_FILE, JSON.stringify(data, null, 2), 'utf8');
+  } catch (error) {
+    console.error('Error saving to filesystem:', error);
+    throw error;
+  }
 }
 
 export async function createMeeting(link: string): Promise<MeetingRecord> {
