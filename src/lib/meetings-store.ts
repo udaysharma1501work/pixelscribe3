@@ -4,13 +4,8 @@
 import { randomUUID } from 'crypto';
 import fs from 'fs/promises';
 import path from 'path';
-// Optional: Vercel Blob in production
-let vercelBlob: any = null;
-try {
-  // Lazy require to avoid build errors if not installed locally
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  vercelBlob = require('@vercel/blob');
-} catch {}
+// Simple in-memory storage for now - will persist during function execution
+let memoryStore: { meetings: MeetingRecord[] } = { meetings: [] };
 
 export type MeetingTranscriptSegment = {
   speaker: string;
@@ -31,16 +26,8 @@ export type MeetingRecord = {
 
 const DATA_DIR = path.join(process.cwd(), '.data');
 const MEETINGS_FILE = path.join(DATA_DIR, 'meetings.json');
-const USE_BLOB = !!process.env.BLOB_READ_WRITE_TOKEN || !!process.env.VERCEL_BLOB_READ_WRITE_TOKEN;
 
-console.log('Storage config:', {
-  USE_BLOB,
-  hasBlobToken: !!process.env.BLOB_READ_WRITE_TOKEN,
-  hasVercelBlobToken: !!process.env.VERCEL_BLOB_READ_WRITE_TOKEN,
-  vercelBlobAvailable: !!vercelBlob
-});
-
-const BLOB_KEY = 'pixelscribe/meetings.json';
+console.log('Using simple in-memory storage for Vercel');
 
 async function ensureDataFile(): Promise<void> {
   await fs.mkdir(DATA_DIR, { recursive: true });
@@ -52,76 +39,14 @@ async function ensureDataFile(): Promise<void> {
 }
 
 async function loadAll(): Promise<{ meetings: MeetingRecord[] }> {
-  if (USE_BLOB && vercelBlob) {
-    try {
-      const { list } = vercelBlob;
-      const listing = await list({ prefix: BLOB_KEY, token: process.env.BLOB_READ_WRITE_TOKEN || process.env.VERCEL_BLOB_READ_WRITE_TOKEN });
-      const existing = (listing.blobs || []).find((b: any) => b.pathname === BLOB_KEY);
-      if (!existing) {
-        console.log('No existing blob found, returning empty meetings');
-        return { meetings: [] };
-      }
-      console.log('Found existing blob, fetching data...');
-      const res = await fetch(existing.url, { cache: 'no-store' });
-      if (!res.ok) {
-        console.error('Failed to fetch blob data:', res.status);
-        return { meetings: [] };
-      }
-      const json = await res.json();
-      console.log('Loaded from blob successfully, meetings count:', json.meetings?.length || 0);
-      return json;
-    } catch (error) {
-      console.error('Error loading from blob:', error);
-      return { meetings: [] };
-    }
-  }
-
-  // Fallback: in-memory storage for Vercel (not persistent across function invocations)
-  if (process.env.VERCEL) {
-    console.log('Using in-memory storage (not persistent)');
-    return { meetings: [] };
-  }
-
-  try {
-    await ensureDataFile();
-    const raw = await fs.readFile(MEETINGS_FILE, 'utf8');
-    return JSON.parse(raw || '{"meetings":[]}');
-  } catch (error) {
-    console.error('Error loading from filesystem:', error);
-    return { meetings: [] };
-  }
+  console.log('Loading meetings from memory store, count:', memoryStore.meetings.length);
+  return memoryStore;
 }
 
 async function saveAll(data: { meetings: MeetingRecord[] }): Promise<void> {
-  if (USE_BLOB && vercelBlob) {
-    try {
-      const { put } = vercelBlob;
-      await put(BLOB_KEY, JSON.stringify(data, null, 2), {
-        access: 'public',
-        contentType: 'application/json',
-        token: process.env.BLOB_READ_WRITE_TOKEN || process.env.VERCEL_BLOB_READ_WRITE_TOKEN,
-      });
-      console.log('Saved to blob successfully');
-      return;
-    } catch (error) {
-      console.error('Error saving to blob:', error);
-      // Continue to fallback
-    }
-  }
-
-  // Fallback: in-memory storage for Vercel (not persistent)
-  if (process.env.VERCEL) {
-    console.log('Using in-memory storage (not persistent) - data will be lost on function restart');
-    return;
-  }
-
-  try {
-    await ensureDataFile();
-    await fs.writeFile(MEETINGS_FILE, JSON.stringify(data, null, 2), 'utf8');
-  } catch (error) {
-    console.error('Error saving to filesystem:', error);
-    throw error;
-  }
+  console.log('Saving meetings to memory store, count:', data.meetings.length);
+  memoryStore = data;
+  console.log('Saved to memory store successfully');
 }
 
 export async function createMeeting(link: string): Promise<MeetingRecord> {
