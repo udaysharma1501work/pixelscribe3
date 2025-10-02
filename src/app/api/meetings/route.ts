@@ -10,7 +10,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing or invalid link' }, { status: 400 });
     }
 
+    console.log('Creating meeting for link:', link);
     const meeting = await createMeeting(link);
+    console.log('Created meeting:', meeting.id);
 
     // Fire-and-forget processing using the placeholder flow for now
     // In production, move to a durable queue/cron/task runner.
@@ -19,7 +21,9 @@ export async function POST(req: NextRequest) {
         await updateMeeting(meeting.id, { status: 'recording' });
         
         // Only run AI processing if API key is available
+        console.log('GOOGLE_API_KEY available:', !!process.env.GOOGLE_API_KEY);
         if (process.env.GOOGLE_API_KEY) {
+          console.log('Running AI processing...');
           const result = await processMeetingLink({ meetingLink: link });
           await updateMeeting(meeting.id, {
             status: 'completed',
@@ -27,8 +31,10 @@ export async function POST(req: NextRequest) {
             summary: result.summary,
             transcript: result.transcript,
           });
+          console.log('AI processing completed');
         } else {
           // No API key - just mark as queued for manual processing
+          console.log('No API key, marking as queued');
           await updateMeeting(meeting.id, { 
             status: 'queued',
             errorMessage: 'AI processing requires GOOGLE_API_KEY to be set'
@@ -44,7 +50,10 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ id: meeting.id }, { status: 201 });
   } catch (e) {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+    console.error('Error in POST /api/meetings:', e);
+    return NextResponse.json({ 
+      error: e instanceof Error ? e.message : 'Unknown error occurred' 
+    }, { status: 500 });
   }
 }
 

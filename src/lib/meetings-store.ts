@@ -79,19 +79,27 @@ async function saveAll(data: { meetings: MeetingRecord[] }): Promise<void> {
 }
 
 export async function createMeeting(link: string): Promise<MeetingRecord> {
-  const id = randomUUID();
-  const now = new Date().toISOString();
-  const record: MeetingRecord = {
-    id,
-    link,
-    title: `Meeting: ${link.split('/').pop() || id}`,
-    date: now,
-    status: 'queued',
-  };
-  const data = await loadAll();
-  data.meetings.unshift(record);
-  await saveAll(data);
-  return record;
+  try {
+    const id = randomUUID();
+    const now = new Date().toISOString();
+    const record: MeetingRecord = {
+      id,
+      link,
+      title: `Meeting: ${link.split('/').pop() || id}`,
+      date: now,
+      status: 'queued',
+    };
+    console.log('Creating meeting record:', record);
+    const data = await loadAll();
+    console.log('Loaded existing data, meetings count:', data.meetings.length);
+    data.meetings.unshift(record);
+    await saveAll(data);
+    console.log('Saved meeting record successfully');
+    return record;
+  } catch (error) {
+    console.error('Error in createMeeting:', error);
+    throw error;
+  }
 }
 
 export async function getMeeting(id: string): Promise<MeetingRecord | null> {
