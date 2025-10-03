@@ -4,8 +4,9 @@
 import { randomUUID } from 'crypto';
 import fs from 'fs/promises';
 import path from 'path';
-// Use a simple JSON file in /tmp (writable on Vercel)
-const TMP_FILE = '/tmp/meetings.json';
+// Use a simple approach - store in a global variable that persists
+// This is a temporary solution until we set up proper database
+let globalMeetings: { meetings: MeetingRecord[] } = { meetings: [] };
 
 export type MeetingTranscriptSegment = {
   speaker: string;
@@ -39,21 +40,14 @@ async function ensureDataFile(): Promise<void> {
 }
 
 async function loadAll(): Promise<{ meetings: MeetingRecord[] }> {
-  try {
-    const raw = await fs.readFile(TMP_FILE, 'utf8');
-    const data = JSON.parse(raw || '{"meetings":[]}');
-    console.log('Loaded meetings from /tmp, count:', data.meetings.length);
-    return data;
-  } catch (error) {
-    console.log('No existing file, starting with empty meetings');
-    return { meetings: [] };
-  }
+  console.log('Loading meetings from global storage, count:', globalMeetings.meetings.length);
+  return globalMeetings;
 }
 
 async function saveAll(data: { meetings: MeetingRecord[] }): Promise<void> {
-  console.log('Saving meetings to /tmp, count:', data.meetings.length);
-  await fs.writeFile(TMP_FILE, JSON.stringify(data, null, 2), 'utf8');
-  console.log('Saved to /tmp successfully');
+  console.log('Saving meetings to global storage, count:', data.meetings.length);
+  globalMeetings = data;
+  console.log('Saved to global storage successfully');
 }
 
 export async function createMeeting(link: string): Promise<MeetingRecord> {
