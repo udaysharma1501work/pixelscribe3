@@ -49,10 +49,16 @@ export async function POST(req: NextRequest) {
     })();
 
     // Trigger the bot to start recording
-    if (process.env.BOT_SERVICE_URL) {
+    const botServiceUrl = process.env.BOT_SERVICE_URL || 'https://pixelscribe-bot.onrender.com';
+    if (botServiceUrl) {
       try {
         console.log('Triggering bot to start recording...');
-        const botResponse = await fetch(`${process.env.BOT_SERVICE_URL}/start-recording`, {
+        const botUrl = botServiceUrl.endsWith('/') 
+          ? botServiceUrl.slice(0, -1) 
+          : botServiceUrl;
+        const fullUrl = `${botUrl}/start-recording`;
+        console.log(`Calling bot at: ${fullUrl}`);
+        const botResponse = await fetch(fullUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -64,7 +70,9 @@ export async function POST(req: NextRequest) {
         if (botResponse.ok) {
           console.log('Bot recording started successfully');
         } else {
-          console.error('Bot failed to start:', await botResponse.text());
+          const errorText = await botResponse.text();
+          console.error('Bot failed to start:', errorText);
+          console.error('Response status:', botResponse.status);
         }
       } catch (error) {
         console.error('Error triggering bot:', error);
